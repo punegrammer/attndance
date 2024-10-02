@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Class Attendance System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            color: #4b5ea3;
+            text-align: center;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4b5ea3;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #3b4e8a;
+        }
+
+        #absentRollsList {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        #absentRollsList li {
+            background-color: #f0f4fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .report-section input {
+            width: 48%;
+            display: inline-block;
+        }
+
+        .report-section button {
+            width: auto;
+        }
+
+        .report-section label {
+            width: 100%;
+            text-align: left;
+        }
+
+        .report-result {
+            margin-top: 20px;
+            background-color: #e6efff;
+            padding: 15px;
+            border-radius: 5px;
+            color: #333;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- Login Section -->
+        <div id="loginContainer">
+            <h2>Login to Access Attendance System</h2>
+            <label for="classSelect">Select Class:</label>
+            <select id="classSelect">
+                <option value="11">Class 11</option>
+                <option value="12">Class 12</option>
+            </select>
+            <br>
+            <button onclick="login()">Login</button>
+        </div>
+
+        <!-- Attendance Entry Section -->
+        <div id="attendanceForm" class="hidden">
+            <h2>Attendance Entry for Class <span id="classDisplay"></span></h2>
+            <label for="attendanceDate">Select Date:</label>
+            <input type="date" id="attendanceDate" required>
+            
+            <label for="rollInput">Enter Absent Roll Number:</label>
+            <input type="text" id="rollInput" placeholder="Enter roll number">
+            <button onclick="addAbsentRoll()">Enter</button>
+            
+            <ul id="absentRollsList"></ul>
+            <button onclick="submitAttendance()">Submit Attendance</button>
+        </div>
+
+        <!-- Report Section -->
+        <div id="reportSection" class="hidden report-section">
+            <h2>Generate Attendance Report</h2>
+            <label for="fromDate">From:</label>
+            <input type="date" id="fromDate">
+            <label for="toDate">To:</label>
+            <input type="date" id="toDate">
+            <button onclick="generateReport()">Generate Report</button>
+            <div id="reportResult" class="report-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const attendanceData = JSON.parse(localStorage.getItem('attendanceData')) || {};  // Store attendance data
+
+        let currentClass = '';
+        let totalStudents = 0;
+        let absentRollNumbers = [];
+
+        // Login function
+        function login() {
+            currentClass = document.getElementById('classSelect').value;
+            totalStudents = currentClass == '11' ? 87 : 77;
+
+            document.getElementById('loginContainer').classList.add('hidden');
+            document.getElementById('attendanceForm').classList.remove('hidden');
+            document.getElementById('reportSection').classList.remove('hidden');
+            document.getElementById('classDisplay').textContent = currentClass;
+        }
+
+        // Append absent roll number
+        function addAbsentRoll() {
+            const rollInput = document.getElementById('rollInput').value.trim();
+            if (rollInput && !absentRollNumbers.includes(rollInput)) {
+                absentRollNumbers.push(rollInput);
+                updateAbsentRollList();
+            }
+            document.getElementById('rollInput').value = ''; // Clear input
+        }
+
+        // Update absent roll number list UI
+        function updateAbsentRollList() {
+            const absentRollsList = document.getElementById('absentRollsList');
+            absentRollsList.innerHTML = '';
+            absentRollNumbers.forEach(roll => {
+                const li = document.createElement('li');
+                li.textContent = `Roll Number: ${roll}`;
+                absentRollsList.appendChild(li);
+            });
+        }
+
+        // Submit Attendance Data
+        function submitAttendance() {
+            const selectedDate = document.getElementById('attendanceDate').value;
+            if (!selectedDate) {
+                alert('Please select a date.');
+                return;
+            }
+
+            const attendanceForDate = {
+                class: currentClass,
+                absent: absentRollNumbers,
+                totalStudents: totalStudents,
+                present: totalStudents - absentRollNumbers.length
+            };
+
+            // Save data in localStorage
+            if (!attendanceData[selectedDate]) {
+                attendanceData[selectedDate] = [];
+            }
+            attendanceData[selectedDate].push(attendanceForDate);
+            localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+
+            alert('Attendance submitted for ' + selectedDate);
+            absentRollNumbers = []; // Clear roll number list after submission
+            updateAbsentRollList();
+        }
+
+        // Generate Report for Date Range
+        function generateReport() {
+            const fromDate = document.getElementById('fromDate').value;
+            const toDate = document.getElementById('toDate').value;
+            const reportResult = document.getElementById('reportResult');
+            reportResult.innerHTML = '';
+
+            if (!fromDate || !toDate) {
+                alert('Please select both dates.');
+                return;
+            }
+
+            let totalDays = 0;
+            let totalPresent = 0;
+
+            // Loop through the attendance data within the date range
+            Object.keys(attendanceData).forEach(date => {
+                if (date >= fromDate && date <= toDate) {
+                    attendanceData[date].forEach(record => {
+                        totalDays++;
+                        totalPresent += record.present;
+                    });
+                }
+            });
+
+            const averageAttendance = (totalPresent / (totalDays * totalStudents)) * 100;
+            reportResult.innerHTML = `Total Days: ${totalDays}<br>Total Present: ${totalPresent}<br>Attendance Percentage: ${averageAttendance.toFixed(2)}%`;
+        }
+    </script>
+</body>
+</html>
